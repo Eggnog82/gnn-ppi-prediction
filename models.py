@@ -78,8 +78,8 @@ class GCNN(nn.Module):
         return out
         
 
-net = GCNN()
-print(net)
+# net = GCNN()
+# print(net)
 
 """# GAT"""
 
@@ -156,8 +156,8 @@ class AttGNN(nn.Module):
         out = self.sigmoid(out)
         return out
 
-net_GAT = AttGNN()
-print(net_GAT)
+# net_GAT = AttGNN()
+# print(net_GAT)
 
 """# Multi-hop GAT"""
 
@@ -253,6 +253,79 @@ class MultiHopAttGNN(nn.Module):
         out = self.sigmoid(out)
         return out
 
-net_multihop_GAT = MultiHopAttGNN()
-print(net_multihop_GAT)
+# net_multihop_GAT = MultiHopAttGNN()
+# print(net_multihop_GAT)
 
+class WeightedAttGNN(nn.Module):
+    def __init__(self, n_output=1, num_node_features=1024, num_edge_features=1, output_dim=128, dropout=0.2):
+        super(WeightedAttGNN, self).__init__()
+
+        print('Weighted Attention GNN Loaded')
+
+        self.hidden = 128
+        self.heads = 1
+        
+        # for protein 1
+        # self.pro1_conv1 = GATConv(in_channels=num_node_features, out_channels=self.hidden, heads=self.heads, dropout=0.2, edge_dim=num_edge_features)
+        self.pro1_conv1 = TransformerConv(in_channels=num_node_features, out_channels=self.hidden, heads=self.heads, dropout=0.2, edge_dim=num_edge_features)
+        self.pro1_fc1 = nn.Linear(self.hidden, output_dim)
+
+
+        # for protein 2
+        #self.pro2_conv1 = GATConv(in_channels=num_node_features, out_channels=self.hidden, heads=self.heads, dropout=0.2, edge_dim=num_edge_features)
+        self.pro2_conv1 = TransformerConv(in_channels=num_node_features, out_channels=self.hidden, heads=self.heads, dropout=0.2, edge_dim=num_edge_features)
+        self.pro2_fc1 = nn.Linear(self.hidden, output_dim)
+
+        self.relu = nn.LeakyReLU()
+        self.sigmoid = nn.Sigmoid()
+        self.dropout = nn.Dropout(dropout)
+
+        # combined layers
+        self.fc1 = nn.Linear(2 * output_dim, 256)
+        self.fc2 = nn.Linear(256, 64)
+        self.out = nn.Linear(64, n_output)
+
+    def forward(self, pro1_data, pro2_data):
+        """Takes as input the graphs of two proteins, outputs a binary classification for whether the proteins interact or not"""
+
+        # get graph input for protein 1 
+        pro1_x, pro1_edge_index, pro1_edge_attr, pro1_batch = pro1_data.x, pro1_data.edge_index, pro1_data.edge_attr, pro1_data.batch
+
+        # get graph input for protein 2
+        pro2_x, pro2_edge_index, pro2_edge_attr, pro2_batch = pro2_data.x, pro2_data.edge_index, pro2_data.edge_attr, pro2_data.batch
+         
+        
+        x = self.pro1_conv1(x=pro1_x, edge_index=pro1_edge_index, edge_attr=pro1_edge_attr)
+        x = self.relu(x)
+        
+	# global pooling
+        x = gep(x, pro1_batch)  
+       
+        # flatten
+        x = self.relu(self.pro1_fc1(x))
+        x = self.dropout(x)
+
+        xt = self.pro2_conv1(x=pro2_x, edge_index=pro2_edge_index, edge_attr=pro2_edge_attr)
+        xt = self.relu(self.pro2_fc1(xt))
+	
+	# global pooling
+        xt = gep(xt, pro2_batch)  
+
+        # flatten
+        xt = self.relu(xt)
+        xt = self.dropout(xt)
+
+	
+	# Concatenation
+        xc = torch.cat((x, xt), 1)
+
+        # add some dense layers
+        xc = self.fc1(xc)
+        xc = self.relu(xc)
+        xc = self.dropout(xc)
+        xc = self.fc2(xc)
+        xc = self.relu(xc)
+        xc = self.dropout(xc)
+        out = self.out(xc)
+        out = self.sigmoid(out)
+        return out

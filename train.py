@@ -22,13 +22,39 @@ import torch.nn.functional as F
 from torch_geometric.nn import MessagePassing
 from torch_geometric.utils import add_self_loops, degree
 from data_prepare import dataset, trainloader, testloader
-from models import GCNN, AttGNN, MultiHopAttGNN
+from models import GCNN, AttGNN, MultiHopAttGNN, WeightedAttGNN
 from torch_geometric.data import DataLoader as DataLoader_n
 
 print("Datalength")
 print(len(dataset))
 print(len(trainloader))
 print(len(testloader))
+
+# Allow the user to select which model is trained (cuts down on repeated code)
+import argparse
+
+MODELS = ["GCNN", "AttGNN", "MultiHopAttGNN", "WeightedAttGNN"]
+
+parser = argparse.ArgumentParser()
+
+parser.add_argument("model", help=f"Name of the model to train from {MODELS}")
+
+args = parser.parse_args()
+
+assert args.model in MODELS, f"Model must be one of the following: {MODELS}"
+
+print(f"Training model: {args.model}")
+
+model = None
+
+if args.model == "GCNN":
+  model = GCNN()
+elif args.model == "AttGNN":
+  model = AttGNN()
+elif args.model == "MultiHopAttGNN":
+  model = MultiHopAttGNN()
+elif args.model == "WeightedAttGNN":
+  model = WeightedAttGNN()
 
 
 
@@ -90,10 +116,9 @@ epochs_no_improve = 0
 early_stop = False
 
 
-model = GCNN()
-model = MultiHopAttGNN()
+
 model.to(device)
-# num_epochs = 50
+
 num_epochs = 50
 loss_func = nn.MSELoss()
 min_loss = 100
