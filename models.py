@@ -195,20 +195,21 @@ class MultiHopAttGNN(nn.Module):
     def forward(self, pro1_data, pro2_data):
 
         # get graph input for protein 1 
-        pro1_x, pro1_edge_index, pro1_multi_hop_edge_index, pro1_batch = pro1_data.x, pro1_data.edge_index, pro1_data.multi_hop_edge_index, pro1_data.batch
+        pro1_x, pro1_edge_index, pro1_two_hop_edge_index, pro1_three_hop_edge_index, pro1_batch = pro1_data.x, pro1_data.edge_index, pro1_data.two_hop_edge_index, pro1_data.three_hop_edge_index, pro1_data.batch
+
         # get graph input for protein 2
-        pro2_x, pro2_edge_index, pro2_multi_hop_edge_index, pro2_batch = pro2_data.x, pro2_data.edge_index, pro2_data.multi_hop_edge_index, pro2_data.batch
-         
+        pro2_x, pro2_edge_index, pro2_two_hop_edge_index, pro2_three_hop_edge_index, pro2_batch = pro2_data.x, pro2_data.edge_index, pro2_data.two_hop_edge_index, pro2_data.three_hop_edge_index, pro2_data.batch
+
         
         x = self.pro1_conv1(pro1_x, pro1_edge_index)
         x = self.relu(x)
-        x_multi = self.pro1_conv1(pro1_x, pro1_multi_hop_edge_index)
-        x_multi = self.relu(x)
+        x_multi = self.pro1_conv1(pro1_x, pro1_two_hop_edge_index)
+        x_multi = self.relu(x_multi)
         x = x + x_multi
-        # x = self.pro1_conv2(x, pro1_edge_index)
-        # x = self.relu(x)
-        # x = self.pro1_conv3(x, pro1_edge_index)
-        # x = self.relu(x)
+        x_multi = self.pro1_conv1(pro1_x, pro1_three_hop_edge_index)
+        x_multi = self.relu(x_multi)
+        x = x + x_multi
+
         
 	# global pooling
         x = gep(x, pro1_batch)  
@@ -218,17 +219,15 @@ class MultiHopAttGNN(nn.Module):
         x = self.dropout(x)
 
 
-
         xt = self.pro2_conv1(pro2_x, pro2_edge_index)
-        # xt = self.relu(self.pro2_fc1(xt))
         xt = self.relu(xt)
-        xt_multi = self.pro2_conv1(pro2_x, pro2_multi_hop_edge_index)
-        xt_multi = self.relu(xt)
+        xt_multi = self.pro2_conv1(pro2_x, pro2_two_hop_edge_index)
+        xt_multi = self.relu(xt_multi)
         xt = xt + xt_multi
-        # xt = self.pro2_conv2(xt, pro2_edge_index)
-        # xt = self.relu(xt)
-        # xt = self.pro2_conv3(xt, pro2_edge_index)
-        # xt = self.relu(xt)
+        xt_multi = self.pro2_conv1(pro2_x, pro2_three_hop_edge_index)
+        xt_multi = self.relu(xt_multi)
+        xt = xt + xt_multi
+
 	
 	# global pooling
         xt = gep(xt, pro2_batch)  

@@ -1,47 +1,62 @@
-name: ppi_env3
+name: cdialog
 channels:
+  - conda-forge
   - pytorch
   - defaults
 dependencies:
-  # - _libgcc_mutex=0.1=main
-  # - blas=1.0=mkl
+  - blas=1.0
   - bzip2=1.0.8
   - ca-certificates=2021.4.13
   - certifi=2020.12.5
-  # - cudatoolkit==10.2.89
   - ffmpeg=4.3
   - freetype=2.10.4
-  # - intel-openmp=2021.2.0
+  - gmp=6.2.1
+  - gnutls=3.6.15
   - jpeg=9b
+  - lame=3.100
   - lcms2=2.12
-  # - libiconv=1.15
+  - libffi=3.3
   - libpng=1.6.37
+  - libtasn1=4.16.0
   - libtiff=4.1.0
+  - libunistring=0.9.10
   - libuv=1.40.0
   - lz4-c=1.9.3
-  # - mkl=2021.2.0
-  # - mkl-service=2.3.0
-  # - mkl_fft=1.3.0
-  # - mkl_random=1.2.1
+  - ncurses=6.2
   - ninja=1.10.2
   - olefile=0.46=py_0
   - openssl=1.1.1k
   - pillow=8.2.0
   - pip=21.0.1
   - python=3.8.8
+  - pytorch=1.8.0
+  - readline=8.1
   - setuptools=52.0.0
   - six=1.15.0
   - sqlite=3.35.4
   - tk=8.6.10
-  # - torchaudio=0.8.0=py38
-  # - torchvision=0.9.0=py38_cu102
+  - torchvision=0.9.0
   - typing_extensions=3.7.4.3
   - wheel=0.36.2
   - xz=5.2.5
   - zlib=1.2.11
   - zstd=1.4.9
-  - matplotlib
   - pip:
+    - libidn2=2.3.0
+    - libiconv=1.15
+    - openh264=2.1.0
+    - mkl=2021.2.0
+    - mkl_fft=1.3.0
+    - ld_impl_linux-64=2.33.1
+    - torchaudio=0.8.0
+    - nettle=3.7.2
+    - intel-openmp=2021.2.0
+    - mkl_random=1.2.1
+    - libstdcxx-ng=9.1.0
+    - libgcc-ng=9.1.0
+    - _libgcc_mutex=0.1
+    - cudatoolkit=10.2.89
+    - mkl-service=2.3.0
     - absl-py==0.13.0
     - allennlp==2.4.0
     - annoy==1.17.0
@@ -66,7 +81,7 @@ dependencies:
     - fire==0.4.0
     - flatbuffers==1.12
     - gast==0.4.0
-    - gensim
+    - gensim==3.8.3
     - gitdb==4.0.7
     - gitpython==3.1.17
     - google-auth==1.31.0
@@ -86,6 +101,7 @@ dependencies:
     - keras-nightly==2.5.0.dev2021032900
     - keras-preprocessing==1.1.2
     - kiwisolver==1.3.1
+    - leveldb==0.201
     - llvmlite==0.36.0
     - lmdb==1.2.1
     - markdown==3.3.4
