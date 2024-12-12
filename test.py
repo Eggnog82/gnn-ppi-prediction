@@ -4,15 +4,32 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from metrics import *
 from data_prepare import testloader
-from models import GCNN, AttGNN, MultiHopAttGNN
+from models import GCNN, AttGNN, MultiHopAttGNN, WeightedAttGNN
 
 
 # device = torch.device("cuda:0") if torch.cuda.is_available() else torch.cuda("cpu")
 device = torch.device("cuda:1") if torch.cuda.is_available() else torch.device("cpu")
 
-model = GCNN()
-model = MultiHopAttGNN()
-model.load_state_dict(torch.load("./Human_features/GCN.pth")) #path to load the model
+import argparse
+MODELS = ["GCNN", "AttGNN", "MultiHopAttGNN", "WeightedAttGNN"]
+parser = argparse.ArgumentParser()
+parser.add_argument("model", help=f"Name of the model to train from {MODELS}")
+args = parser.parse_args()
+assert args.model in MODELS, f"Model must be one of the following: {MODELS}"
+print(f"Testing model: {args.model}")
+
+model = None
+
+if args.model == "GCNN":
+  model = GCNN()
+elif args.model == "AttGNN":
+  model = AttGNN()
+elif args.model == "MultiHopAttGNN":
+  model = MultiHopAttGNN()
+elif args.model == "WeightedAttGNN":
+  model = WeightedAttGNN()
+
+model.load_state_dict(torch.load(f"./Human_features/{args.model}.pth")) #path to load the model
 model.to(device)
 model.eval()
 predictions = torch.Tensor()

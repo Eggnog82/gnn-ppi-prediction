@@ -142,7 +142,7 @@ for epoch in range(num_epochs):
   if(accuracy > best_accuracy):
     best_accuracy = accuracy
     best_acc_epoch = epoch
-    torch.save(model.state_dict(), "./human_features/3-hop_GCN.pth") #path to save the model
+    torch.save(model.state_dict(), f"./Human_features/{args.model}.pth") #path to save the model
     print("Model")
   if(loss< min_loss):
     epochs_no_improve = 0
