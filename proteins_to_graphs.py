@@ -17,14 +17,15 @@ import torch.nn.functional as F
 from torch_geometric.nn import MessagePassing
 from torch_geometric.utils import add_self_loops, degree
 
-device = torch.device("cuda:0") if torch.cuda.is_available() else torch.cuda("cpu")
+# device = torch.device("cuda:0") if torch.cuda.is_available() else torch.cuda("cpu")
+device = torch.device("cpu")
 print(device)
 
 from Bio import SeqIO
 from Bio.PDB.PDBParser import PDBParser
 
 
-ftrs = np.load("../human_features/pdb_to_seqvec_dict.npy", allow_pickle=True)
+# ftrs = np.load("../human_features/pdb_to_seqvec_dict.npy", allow_pickle=True)
 
 
 # list of 20 proteins
@@ -77,6 +78,7 @@ class ProteinDataset(Dataset):
 
     @property
     def processed_file_names(self):
+        # print(f"Output names: {[os.path.splitext(os.path.basename(file))[0]+'.pt' for file in self.raw_paths]}")
         return [os.path.splitext(os.path.basename(file))[0]+'.pt' for file in self.raw_paths]
 
     def download(self):
@@ -84,68 +86,71 @@ class ProteinDataset(Dataset):
         pass
 
     def process(self):
+
+        # print(f"Process called. There are {len(self.raw_paths)} paths.")
+        # print(self.raw_paths)
+
         # Read data into huge `Data` list.
         self.data = self.processed_paths
-        
         
         data_list =[]
         count = 0
         for file in tqdm(self.raw_paths):
-           if(pathlib.Path(file).suffix ==".pdb"):
-          
-   
-               try:
-                struct = self._get_structure(file)
-               except:
-                print(file)
-                continue
-               seq = self._get_sequence(struct)
 
-          # node features extracted
-               node_feats = self._get_one_hot_symbftrs(seq)
+            # print(f"filetype: {pathlib.Path(file).suffix}")
 
-          #edge-index extracted
+
+            if(pathlib.Path(file).suffix ==".pdb"):
+
+                file = file[19:]
+                
+                try:
+                    struct = self._get_structure(file)
+                except:
+                    print("\nERROR\n")
+                    print(file)
+                    continue
+            
+                seq = self._get_sequence(struct)
+
+                # node features extracted
+                node_feats = self._get_one_hot_symbftrs(seq)
+
+                #edge-index extracted
+                mat = self._get_adjacency(file)
           
-         
-               mat = self._get_adjacency(file)
-          
-           # if sequence size > matrix dimensions 
-               if(mat.shape[0] < torch.Tensor.size(node_feats)[0]) :
-                 #node_feats = torch.tensor(ftrs.item()[os.path.splitext(os.path.basename(file))[0]])
-                 edge_index = self._get_edgeindex(file, mat)
-           
-                 print(f'Node features size :{torch.Tensor.size(node_feats)}')
-                 print(f'mat size :{mat.shape}')
-          # create data object
+                # if sequence size > matrix dimensions 
+                if(mat.shape[0] < torch.Tensor.size(node_feats)[0]) :
+
+                    #node_feats = torch.tensor(ftrs.item()[os.path.splitext(os.path.basename(file))[0]])
+                    edge_index, edge_weights = self._get_edgeindex(file, mat, weights=True)
+                
+                    # create data object
        
-                 data = Data(x = node_feats, edge_index = edge_index )
-                 count += 1
-                 data_list.append(data)
-                 torch.save(data, self.processed_dir + "/"+ os.path.splitext(os.path.basename(file))[0]+'.pt')
- 
+                    data = Data(x = node_feats, edge_index = edge_index, edge_attr = edge_weights)
+                    count += 1
+                    data_list.append(data)
+                    torch.save(data, self.processed_dir + "/"+ os.path.splitext(os.path.basename(file))[0]+'.pt')
            
-               elif mat.shape[0] == torch.Tensor.size(node_feats)[0] : 
-                 #node_feats = torch.tensor(ftrs.item()[os.path.splitext(os.path.basename(file))[0]])
-                 edge_index = self._get_edgeindex(file, mat)
+                elif mat.shape[0] == torch.Tensor.size(node_feats)[0] : 
+                    # print("\nCase 2\n")
+                    #node_feats = torch.tensor(ftrs.item()[os.path.splitext(os.path.basename(file))[0]])
+                    edge_index, edge_weights = self._get_edgeindex(file, mat, weights=True)
            
-           
-                 print(f'Node features size :{torch.Tensor.size(node_feats)}')
-                 print(f'mat size :{mat.shape}')
+                    # print(f'Node features size :{torch.Tensor.size(node_feats)}')
+                    # print(f'mat size :{mat.shape}')
           
-          # create data object
-           
-          
+                    # create data object
+                    data = Data(x = node_feats, edge_index = edge_index, edge_attr = edge_weights)
+                    count += 1
 
-                 data = Data(x = node_feats, edge_index = edge_index )
-                 count += 1
-
-                 data_list.append(data)
-                 torch.save(data, self.processed_dir + "/"+ os.path.splitext(os.path.basename(file))[0]+'.pt')
+                    data_list.append(data)
+                    str = self.processed_dir + "/"+ os.path.splitext(os.path.basename(file))[0]+'.pt'
+                    torch.save(data, self.processed_dir + "/"+ os.path.splitext(os.path.basename(file))[0]+'.pt')
           
         self.data_prot = data_list 
-        print(count)
+        # print(count)
 
-  
         # data, slices = self.collate(data_list)
         # torch.save((data, slices), self.processed_paths[0])
 
@@ -159,25 +164,38 @@ class ProteinDataset(Dataset):
         return self.data_prot[idx] 
      
     def _get_adjacency(self, file):
-        edge_ind =[]
+        """Returns a weighted adjacency matrix for a protein"""
+        
         molecule = bg.Pmolecule(file)
-        network = molecule.network()
-        mat = nx.adjacency_matrix(network)
+        network = molecule.network(cutoff=5, weight=True)
+        mat = nx.adjacency_matrix(network, weight='weight')
         m = mat.todense()
         return m
 
 
     # get adjacency matrix in coo format to pass in GCNN model
-    def _get_edgeindex(self, file, adjacency_mat):
+    def _get_edgeindex(self, file, adjacency_mat, weights=False):
+        """Returns an adjacency matrix for a protein and optionally the associated weights"""
+        
         edge_ind = []
+        edge_weight = []
         m = self._get_adjacency(file)
         #check_symmetric(m, rtol=1e-05, atol=1e-08)
         
         a = np.nonzero(m > 0)[0]
         b = np.nonzero(m > 0)[1]
+        w = m[m > 0]
         edge_ind.append(a)
         edge_ind.append(b)
-        return torch.tensor(np.array(edge_ind), dtype= torch.long)
+        edge_weight.append(w)
+
+        adj_tensor = torch.tensor(np.array(edge_ind), dtype= torch.long)
+        weight_tensor = torch.tensor(np.array(edge_weight), dtype=torch.long)
+
+        if weights:
+            return adj_tensor, weight_tensor
+
+        return adj_tensor
 
 
     # get structure from a pdb file 
@@ -229,4 +247,6 @@ class ProteinDataset(Dataset):
         return torch.tensor(np.hstack((one_hot_symb, res_ftrs_out)), dtype = torch.float)
           
         
-prot_graphs = ProteinDataset("../human_features/")
+prot_graphs = ProteinDataset(root="./Human_features")
+print(prot_graphs.root)
+print(prot_graphs.raw_paths)
