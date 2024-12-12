@@ -21,14 +21,10 @@ import networkx as nx
 import torch.nn.functional as F
 from torch_geometric.nn import MessagePassing
 from torch_geometric.utils import add_self_loops, degree
-from data_prepare import dataset, trainloader, testloader
 from models import GCNN, AttGNN, MultiHopAttGNN, WeightedAttGNN
 from torch_geometric.data import DataLoader as DataLoader_n
 
-print("Datalength")
-print(len(dataset))
-print(len(trainloader))
-print(len(testloader))
+
 
 # Allow the user to select which model is trained (cuts down on repeated code)
 import argparse
@@ -38,6 +34,7 @@ MODELS = ["GCNN", "AttGNN", "MultiHopAttGNN", "WeightedAttGNN"]
 parser = argparse.ArgumentParser()
 
 parser.add_argument("model", help=f"Name of the model to train from {MODELS}")
+parser.add_argument("--num_hops", type=int, help="Number of hops for the MultiHopAttGNN model")
 
 args = parser.parse_args()
 
@@ -52,11 +49,20 @@ if args.model == "GCNN":
 elif args.model == "AttGNN":
   model = AttGNN()
 elif args.model == "MultiHopAttGNN":
-  model = MultiHopAttGNN()
+  if args.num_hops is None:
+    raise ValueError("The 'num_hops' argument is required when the model is MultiHopAttGNN.")
+  elif args.num_hops < 2 or args.num_hops > 3:
+    raise ValueError("The 'num_hops' argument must be within the bounds of [2,3].")
+
+  model = MultiHopAttGNN(num_hops = args.num_hops)
 elif args.model == "WeightedAttGNN":
   model = WeightedAttGNN()
 
-
+from data_prepare import dataset, trainloader, testloader
+print("Datalength")
+print(len(dataset))
+print(len(trainloader))
+print(len(testloader))
 
 total_samples = len(dataset)
 n_iterations = math.ceil(total_samples/5)

@@ -162,13 +162,14 @@ class AttGNN(nn.Module):
 """# Multi-hop GAT"""
 
 class MultiHopAttGNN(nn.Module):
-    def __init__(self, n_output=1, num_features_pro= 1024, output_dim=128, dropout=0.2, heads = 1 ):
+    def __init__(self, num_hops=2, n_output=1, num_features_pro= 1024, output_dim=128, dropout=0.2, heads = 1 ):
         super(MultiHopAttGNN, self).__init__()
 
         print('Multi-hop AttGNN Loaded')
 
         self.hidden = 8
         self.heads = 1
+        self.num_hops = num_hops
         
         # for protein 1
         self.pro1_conv1 = GATConv(num_features_pro, self.hidden* 16, heads=self.heads, dropout=0.2)
@@ -206,9 +207,10 @@ class MultiHopAttGNN(nn.Module):
         x_multi = self.pro1_conv1(pro1_x, pro1_two_hop_edge_index)
         x_multi = self.relu(x_multi)
         x = x + x_multi
-        x_multi = self.pro1_conv1(pro1_x, pro1_three_hop_edge_index)
-        x_multi = self.relu(x_multi)
-        x = x + x_multi
+        if self.num_hops >= 2:
+                x_multi = self.pro1_conv1(pro1_x, pro1_three_hop_edge_index)
+                x_multi = self.relu(x_multi)
+                x = x + x_multi
 
         
 	# global pooling
@@ -224,9 +226,10 @@ class MultiHopAttGNN(nn.Module):
         xt_multi = self.pro2_conv1(pro2_x, pro2_two_hop_edge_index)
         xt_multi = self.relu(xt_multi)
         xt = xt + xt_multi
-        xt_multi = self.pro2_conv1(pro2_x, pro2_three_hop_edge_index)
-        xt_multi = self.relu(xt_multi)
-        xt = xt + xt_multi
+        if self.num_hops >= 2:
+                xt_multi = self.pro2_conv1(pro2_x, pro2_three_hop_edge_index)
+                xt_multi = self.relu(xt_multi)
+                xt = xt + xt_multi
 
 	
 	# global pooling
