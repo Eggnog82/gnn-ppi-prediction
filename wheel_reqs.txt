@@ -1,0 +1,4 @@
+--no-index torch-scatter -f https://data.pyg.org/whl/torch-1.9.0+cpu.html
+--no-index torch-sparse -f https://data.pyg.org/whl/torch-1.9.0+cpu.html
+--no-index torch-cluster -f https://data.pyg.org/whl/torch-1.9.0+cpu.html
+--no-index torch-spline-conv -f https://data.pyg.org/whl/torch-1.9.0+cpu.html

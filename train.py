@@ -93,7 +93,6 @@ early_stop = False
 model = GCNN()
 model = MultiHopAttGNN()
 model.to(device)
-# num_epochs = 50
 num_epochs = 50
 loss_func = nn.MSELoss()
 min_loss = 100
@@ -111,7 +110,7 @@ for epoch in range(num_epochs):
   if(accuracy > best_accuracy):
     best_accuracy = accuracy
     best_acc_epoch = epoch
-    torch.save(model.state_dict(), "./human_features/GCN.pth") #path to save the model
+    torch.save(model.state_dict(), "./human_features/3-hop_GCN.pth") #path to save the model
     print("Model")
   if(loss< min_loss):
     epochs_no_improve = 0
