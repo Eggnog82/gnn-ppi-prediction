@@ -264,19 +264,20 @@ class WeightedAttGNN(nn.Module):
 
         print('Weighted Attention GNN Loaded')
 
-        self.hidden = 128
-        self.heads = 1
+        self.hidden1 = 256
+        self.hidden2 = 128
+        self.heads = 2
         
         # for protein 1
-        # self.pro1_conv1 = GATConv(in_channels=num_node_features, out_channels=self.hidden, heads=self.heads, dropout=0.2, edge_dim=num_edge_features)
-        self.pro1_conv1 = TransformerConv(in_channels=num_node_features, out_channels=self.hidden, heads=self.heads, dropout=0.2, edge_dim=num_edge_features)
-        self.pro1_fc1 = nn.Linear(self.hidden, output_dim)
+        self.pro1_conv1 = TransformerConv(in_channels=num_node_features, out_channels=self.hidden1, heads=self.heads, dropout=0.1, edge_dim=num_edge_features)
+        self.pro1_fc1 = nn.Linear(self.hidden1*self.heads, num_node_features)
+        self.pro1_fc2 = nn.Linear(num_node_features, output_dim)
 
 
         # for protein 2
-        #self.pro2_conv1 = GATConv(in_channels=num_node_features, out_channels=self.hidden, heads=self.heads, dropout=0.2, edge_dim=num_edge_features)
-        self.pro2_conv1 = TransformerConv(in_channels=num_node_features, out_channels=self.hidden, heads=self.heads, dropout=0.2, edge_dim=num_edge_features)
-        self.pro2_fc1 = nn.Linear(self.hidden, output_dim)
+        self.pro2_conv1 = TransformerConv(in_channels=num_node_features, out_channels=self.hidden1, heads=self.heads, dropout=0.1, edge_dim=num_edge_features)
+        self.pro2_fc1 = nn.Linear(self.hidden1*self.heads, num_node_features)
+        self.pro2_fc2 = nn.Linear(num_node_features, output_dim)
 
         self.relu = nn.LeakyReLU()
         self.sigmoid = nn.Sigmoid()
@@ -296,27 +297,31 @@ class WeightedAttGNN(nn.Module):
         # get graph input for protein 2
         pro2_x, pro2_edge_index, pro2_edge_attr, pro2_batch = pro2_data.x, pro2_data.edge_index, pro2_data.edge_attr, pro2_data.batch
          
-        
-        x = self.pro1_conv1(x=pro1_x, edge_index=pro1_edge_index, edge_attr=pro1_edge_attr)
-        x = self.relu(x)
+        # Convolution
+        x = self.sigmoid(self.pro1_conv1(x=pro1_x, edge_index=pro1_edge_index, edge_attr=pro1_edge_attr))
+        x = self.relu(self.pro1_fc1(x))
+
+        x = x + self.sigmoid(pro1_x)
         
 	# global pooling
         x = gep(x, pro1_batch)  
        
         # flatten
-        x = self.relu(self.pro1_fc1(x))
+        x = self.relu(self.pro1_fc2(x))
         x = self.dropout(x)
 
-        xt = self.pro2_conv1(x=pro2_x, edge_index=pro2_edge_index, edge_attr=pro2_edge_attr)
+        # Convolution
+        xt = self.sigmoid(self.pro2_conv1(x=pro2_x, edge_index=pro2_edge_index, edge_attr=pro2_edge_attr))
         xt = self.relu(self.pro2_fc1(xt))
+
+        xt = xt + self.sigmoid(pro2_x)
 	
 	# global pooling
         xt = gep(xt, pro2_batch)  
 
         # flatten
-        xt = self.relu(xt)
+        xt = self.relu(self.pro2_fc2(xt))
         xt = self.dropout(xt)
-
 	
 	# Concatenation
         xc = torch.cat((x, xt), 1)
@@ -331,3 +336,6 @@ class WeightedAttGNN(nn.Module):
         out = self.out(xc)
         out = self.sigmoid(out)
         return out
+
+# net_weighted_GAT = WeightedAttGNN()
+# print(net_weighted_GAT)
