@@ -2,11 +2,21 @@
 
 ## Reproducibility
 
+### Reproducing GCNN, GAT, or Multi-Hop GAT
 In order to replicate the results on GCNN, GAT, or Multi-Hop Attention GNNs, do the following steps
-  1. Download the conda environment as follows
+  1. Download the conda environment as follows. In order to maintain support for the 2022 paper that we compare our models to, many of the packages are old and hard to source correctly. As a result, the install may differ based on your computer OS. It is also why this is not the cleanest download process. However, it worked on my Windows PC and on the Grace cluster at Yale. If you do try to replicate this on the Grace Cluster, you will need a GPU compatible with our code. Try to run with partition "gpu_devel" and additional job option "--constraint=rtx2080ti". If you have any issues, email brennan.lagasse@yale.edu and eric.w.li@yale.edu.
 
 ```bash
-conda env create -f ppi_env.yml
+conda env create -f ppi_env3.yml
+conda install anaconda::scikit-learn
+conda install conda-forge::tqdm
+conda install conda-forge::torch-optimizer
+conda install anaconda::networkx
+pip install --no-index torch-scatter -f https://data.pyg.org/whl/torch-1.8.0+cu102.html
+pip install --no-index torch-sparse -f https://data.pyg.org/whl/torch-1.8.0+cu102.html
+pip install --no-index torch-cluster -f https://data.pyg.org/whl/torch-1.8.0+cu102.html
+pip install --no-index torch-spline-conv -f https://data.pyg.org/whl/torch-1.8.0+cu102.html
+pip install torch-geometric==1.7.0
 ```
 
   2. Create directory ```Human_features/``` in the main directory, and add subdirectory ```processed/```
@@ -25,13 +35,32 @@ python train.py MODEL
 python test.py MODEL
 ```
 
+### Reproducing Weighted GAT (or any of the above using the weighted dataset)
 To replicate the results of WeightedAttGNN, there are a few additional steps since the datset must be generated from scratch. To replicate the results on this model, do the following steps. This process is somewhat complicated, but it is the result of significant effort to ensure that the weighted dataset generated is as similar as possible to the unweighted dataset from the Jha et al. paper, up to weights of course. I tried my best to consolidate the process, but I am already 40 hours into data processing. All of the code below should be run from base directory of this repository.
 
-1. Download the conda environment as follows
+1. Same as above.
+
+2. Same as above.
+
+3. Download the graph dataset I generated found here https://drive.google.com/drive/folders/1nwtpS1Yu7Pmx9kLSDZJtbbyhCf91f32P?usp=drive_link and store the files in ```./Human_features/processed/```. If there is an issue, see the steps below for how to generate the graphs from scratch, or contact brennan.lagasse@yale.edu.
+
+4. Take the ```npy_file_new(human_dataset)_v2.npy``` file in the main directory and put it in the ```Human_features/``` directory. Edit ```data_prepare.py``` line 32 to read ```npy_file = "./Human_features/npy_file_new(human_dataset)_v2.npy"```
+
+5. Run the following to train the model. MODEL is replaced with WeightedAttGNN, GCNN, GAT, or MultiHopAttGNN depending on the model you want to run
 
 ```bash
-conda env create -f ppi_env.yml
+python train.py MODEL
 ```
+
+6. Run the following to test the model
+
+```bash
+python test.py MODEL
+``` 
+
+### How to generate the Weighted Graphs from scratch (if you really want to)
+
+1. Follow steps one and two above.
 
 2. Create directory ```Human_features/``` in the main directory, and add subdirectories ```processed/```, ```processed_old```, and ```raw```. These will store the new weighted graphs that will be generates, the old unweighted graphs from Jha et al, and the raw protein files respectively.
 
@@ -62,16 +91,4 @@ python get_embeddings.py
 ```bash
 python update_nby.py
 ```
-
-8. Run the following to train the model. MODEL is replaced with GCNN, GAT, or MultiHopAttGNN depending on the model you want to run
-
-```bash
-python train.py WeightedAttGNN
-```
-
-9. Run the following to test the model
-
-```bash
-python test.py WeightedAttGNN
-``` 
 
